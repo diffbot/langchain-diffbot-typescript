@@ -108,7 +108,7 @@ function extractSteps(messages: readonly BaseMessage[]): Step[] {
   small and capped, so a higher ceiling costs little and turns a hard failure
   into a slightly longer run.
 */
-const RECURSION_LIMIT = Number(process.env.DQL_EXPLORER_RECURSION_LIMIT ?? "60");
+const RECURSION_LIMIT = 60;
 
 /* Build a LangSmith run URL when tracing is enabled. Never throws. */
 async function traceUrl(runId: string): Promise<string | null> {
