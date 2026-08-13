@@ -1,0 +1,94 @@
+{
+  "name": "@diffbot/langchain",
+  "version": "0.1.0",
+  "description": "LangChain integration for the Diffbot APIs — Knowledge Graph, Extract, Web Search, NLP entities, Crawl, and the Diffbot LLM RAG endpoint",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      },
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "pnpm run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:live": "vitest run --config vitest.live.config.ts",
+    "test:coverage": "vitest run --coverage --coverage.include='src/**'",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/ tests/",
+    "format": "prettier --write src tests"
+  },
+  "keywords": [
+    "langchain",
+    "diffbot",
+    "knowledge-graph",
+    "retriever",
+    "agent",
+    "tools",
+    "web-search",
+    "extract",
+    "crawler",
+    "nlp",
+    "llm",
+    "rag"
+  ],
+  "author": "Diffbot",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/diffbot/diffbot-langchain-typescript.git"
+  },
+  "bugs": {
+    "url": "https://github.com/diffbot/diffbot-langchain-typescript/issues"
+  },
+  "homepage": "https://github.com/diffbot/diffbot-langchain-typescript#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  },
+  "dependencies": {
+    "zod": "^3.25.76 || ^4"
+  },
+  "peerDependencies": {
+    "@diffbot/typescript": "^0.1.0",
+    "@langchain/core": "^1.0.0"
+  },
+  "devDependencies": {
+    "@diffbot/typescript": "^0.1.0",
+    "@eslint/js": "^9.20.0",
+    "@langchain/core": "^1.2.5",
+    "@types/node": "^22.15.21",
+    "@vitest/coverage-v8": "^3.2.6",
+    "eslint": "^9.20.0",
+    "jiti": "^2.4.2",
+    "prettier": "^3.4.2",
+    "tsup": "^8.5.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.24.0",
+    "vitest": "^3.2.1"
+  }
+}

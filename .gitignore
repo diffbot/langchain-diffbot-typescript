@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+*.tgz
+
+# Scratch modules written by tests/readme_examples.test.ts while executing
+# README code blocks. Created in beforeAll, removed in afterAll.
+.readme-blocks/
+*.tsbuildinfo
+.DS_Store
+.env

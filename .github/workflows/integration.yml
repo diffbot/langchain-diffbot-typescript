@@ -1,0 +1,30 @@
+name: Integration
+
+# Hits the live Diffbot APIs, so it consumes real quota and needs a token.
+# Kept off the per-PR path: nightly + on-demand only. Neither trigger can be
+# invoked by a fork PR, so the repo-level DIFFBOT_API_TOKEN secret is never
+# exposed to untrusted code. Do NOT add a `pull_request` or `push` trigger
+# here — that would hand the token to arbitrary fork-submitted workflow code.
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    name: integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:live
+        env:
+          DIFFBOT_API_TOKEN: ${{ secrets.DIFFBOT_API_TOKEN }}

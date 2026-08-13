@@ -1,0 +1,32 @@
+{
+  "name": "dql-explorer-example",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Web app over the Diffbot Knowledge Graph: an M&A/IPO dashboard, a plain-English DQL builder agent, and Ask Diffbot RAG chat.",
+  "type": "module",
+  "scripts": {
+    "dev": "./dev.sh",
+    "dev:api": "DQL_EXPLORER_RELOAD=1 tsx watch src/server.ts",
+    "dev:web": "pnpm --dir web run dev",
+    "build": "pnpm --dir web install && pnpm --dir web run build",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@diffbot/langchain": "link:../..",
+    "@diffbot/typescript": "^0.1.0",
+    "@hono/node-server": "^1.19.0",
+    "@langchain/anthropic": "^1.5.4",
+    "@langchain/core": "^1.2.5",
+    "dotenv": "^17.2.3",
+    "hono": "^4.13.0",
+    "langchain": "^1.5.5",
+    "langsmith": "^0.8.10",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.21",
+    "tsx": "^4.19.2",
+    "typescript": "^5.8.3"
+  }
+}

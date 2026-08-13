@@ -1,0 +1,17 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@layer base {
+  /* Let the browser theme native controls (scrollbars, inputs) to match. */
+  :root {
+    color-scheme: light dark;
+  }
+  body {
+    @apply bg-white text-slate-800 dark:bg-slate-900 dark:text-slate-100;
+  }
+  /* Tailwind v4 dropped the default pointer cursor on buttons; restore it. */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
