@@ -13,8 +13,8 @@ importers:
         version: 4.4.3
     devDependencies:
       '@diffbot/typescript':
-        specifier: ^0.1.0
-        version: 0.1.0
+        specifier: ^0.2.0
+        version: 0.2.0
       '@eslint/js':
         specifier: ^9.20.0
         version: 9.39.5
@@ -82,8 +82,8 @@ packages:
   '@cfworker/json-schema@4.1.1':
     resolution: {integrity: sha512-gAmrUZSGtKc3AiBL71iNWxDsyUC5uMaKKGdvzYsBoTW/xi42JQHl7eKV2OYzCUqvc+D2RCcf7EXY2iCyFIk6og==}
 
-  '@diffbot/typescript@0.1.0':
-    resolution: {integrity: sha512-rlP1Eh1t03cQwtY2q8AP8b5xVUEDnKCFkSh6lxCf4eGgXP9mYESh76c2FribcBtKvxZSBrAZt7+Z8cZrtJDgKg==}
+  '@diffbot/typescript@0.2.0':
+    resolution: {integrity: sha512-CnIeBZ+CvGBPFS9GiZj7x7j+yCqmz856DBh95/PWcDEeurD4nSCF1W8DYv+jdNML81mz5aA74a3Z2BOIqE3pLg==}
     engines: {node: '>=18'}
 
   '@esbuild/aix-ppc64@0.27.7':
@@ -1609,7 +1609,7 @@ snapshots:
 
   '@cfworker/json-schema@4.1.1': {}
 
-  '@diffbot/typescript@0.1.0': {}
+  '@diffbot/typescript@0.2.0': {}
 
   '@esbuild/aix-ppc64@0.27.7':
     optional: true
