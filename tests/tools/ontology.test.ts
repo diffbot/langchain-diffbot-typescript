@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DiffbotClient } from "@diffbot/typescript";
+import { DiffbotClient, KVOntologyStore, type KVLike } from "@diffbot/typescript";
 import { DiffbotOntologyTool } from "../../src/tools/ontology.js";
 import { createMockFetch, jsonResponse } from "../helpers/mock-fetch.js";
 
@@ -83,6 +83,71 @@ describe("DiffbotOntologyTool caching", () => {
     /* The refreshed ontology is cached again. */
     await tool.invoke({ op: "types" });
     expect(calls()).toBe(2);
+  });
+});
+
+function mapStore(): KVLike & { data: Map<string, string> } {
+  const data = new Map<string, string>();
+  return {
+    data,
+    get: async (key) => data.get(key) ?? null,
+    put: async (key, value) => {
+      data.set(key, value);
+    },
+    delete: async (key) => {
+      data.delete(key);
+    },
+  };
+}
+
+describe("DiffbotOntologyTool with a durable ontologyStore", () => {
+  it("serves a freshly constructed tool instance from the store with zero fetches", async () => {
+    let fetches = 0;
+    const client = new DiffbotClient({
+      token: "test-token",
+      fetch: createMockFetch(() => {
+        fetches += 1;
+        return jsonResponse(FIXTURE_ONTOLOGY);
+      }),
+    });
+    const kv = mapStore();
+
+    const first = new DiffbotOntologyTool({
+      client,
+      ontologyStore: new KVOntologyStore(client, kv),
+    });
+    expect(await first.invoke({ op: "types" })).toEqual(["Organization", "Person"]);
+    expect(fetches).toBe(1);
+
+    /* A second, freshly constructed tool simulates a recycled Worker isolate. */
+    const second = new DiffbotOntologyTool({
+      client,
+      ontologyStore: new KVOntologyStore(client, kv),
+    });
+    expect(await second.invoke({ op: "types" })).toEqual(["Organization", "Person"]);
+    expect(fetches).toBe(1);
+  });
+
+  it("refresh refetches and rewrites the store", async () => {
+    let fetches = 0;
+    const client = new DiffbotClient({
+      token: "test-token",
+      fetch: createMockFetch(() => {
+        fetches += 1;
+        return jsonResponse(FIXTURE_ONTOLOGY);
+      }),
+    });
+    const kv = mapStore();
+    const tool = new DiffbotOntologyTool({
+      client,
+      ontologyStore: new KVOntologyStore(client, kv),
+    });
+
+    await tool.invoke({ op: "types" });
+    expect(fetches).toBe(1);
+
+    await tool.invoke({ op: "types", refresh: true });
+    expect(fetches).toBe(2);
   });
 });
 

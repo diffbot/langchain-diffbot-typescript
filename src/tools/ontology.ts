@@ -1,5 +1,5 @@
 import { z } from "zod/v3";
-import { dqlFetchOntology, Ontology, type DiffbotClient } from "@diffbot/typescript";
+import { Ontology, OntologyStore, type DiffbotClient } from "@diffbot/typescript";
 import { StructuredTool, type ToolParams } from "@langchain/core/tools";
 import type { InferInteropZodInput, InferInteropZodOutput } from "@langchain/core/utils/types";
 import { assertClient, type DiffbotComponentFields } from "../base.js";
@@ -108,17 +108,24 @@ function ontologyLookup(
   }
 }
 
-export interface DiffbotOntologyToolFields extends ToolParams, DiffbotComponentFields {}
+export interface DiffbotOntologyToolFields extends ToolParams, DiffbotComponentFields {
+  /*
+    Defaults to `new OntologyStore(client)` — an in-memory cache for the
+    life of this tool instance, matching the tool's prior built-in behavior.
+    In a Cloudflare Worker, where isolates are recycled between requests,
+    pass a durable store instead: `new KVOntologyStore(client, env.ONTOLOGY)`.
+  */
+  ontologyStore?: OntologyStore;
+}
 
 /*
   Tool that navigates the Diffbot Knowledge Graph ontology.
 
   Lets an agent discover real entity types, field paths, taxonomy values, and
   enum values *before* writing a DQL query — so it constructs valid queries
-  instead of guessing field names. The ontology is fetched once over HTTP via
-  `dqlFetchOntology()` and cached in memory on the tool instance for the rest of
-  its lifetime (pass `refresh: true` in a call to re-fetch). The caching policy
-  is the consumer's, not the SDK's.
+  instead of guessing field names. Fetching and caching the ontology is the
+  SDK's `OntologyStore`'s job, not this tool's — this tool just calls
+  `ontologyStore.load({ refresh })`.
 */
 export class DiffbotOntologyTool extends StructuredTool<
   typeof schema,
@@ -147,17 +154,12 @@ export class DiffbotOntologyTool extends StructuredTool<
   schema = schema;
 
   client: DiffbotClient;
-
-  /*
-    The in-flight or settled fetch, not the resolved `Ontology`: caching the
-    promise makes concurrent first calls share one HTTP request instead of
-    racing to fetch the same document. `refresh` clears it.
-  */
-  private ontology: Promise<Ontology> | null = null;
+  ontologyStore: OntologyStore;
 
   constructor(fields: DiffbotOntologyToolFields) {
     super(fields);
     this.client = assertClient(fields.client);
+    this.ontologyStore = fields.ontologyStore ?? new OntologyStore(this.client);
   }
 
   async _call({
@@ -166,20 +168,7 @@ export class DiffbotOntologyTool extends StructuredTool<
     search,
     refresh,
   }: InferInteropZodOutput<typeof schema>): Promise<OntologyLookupResult> {
-    if (refresh) {
-      this.ontology = null;
-    }
-    this.ontology ??= dqlFetchOntology(this.client);
-
-    let ont: Ontology;
-    try {
-      ont = await this.ontology;
-    } catch (exc) {
-      /* A failed fetch must not poison the cache — the next call retries. */
-      this.ontology = null;
-      throw exc;
-    }
-
+    const ont = await this.ontologyStore.load({ refresh });
     return ontologyLookup(ont, op, name, search);
   }
 }

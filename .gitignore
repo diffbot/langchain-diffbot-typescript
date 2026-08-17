@@ -9,3 +9,5 @@ coverage/
 *.tsbuildinfo
 .DS_Store
 .env
+fixtures/*/.wrangler*
+fixtures/*/node_modules

@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@diffbot/langchain": "link:../..",
-    "@diffbot/typescript": "^0.1.0",
+    "@diffbot/typescript": "^0.2.0",
     "@hono/node-server": "^1.19.0",
     "@langchain/anthropic": "^1.5.4",
     "@langchain/core": "^1.2.5",

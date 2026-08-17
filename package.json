@@ -1,6 +1,6 @@
 {
   "name": "@diffbot/langchain",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "LangChain integration for the Diffbot APIs — Knowledge Graph, Extract, Web Search, NLP entities, Crawl, and the Diffbot LLM RAG endpoint",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -73,11 +73,11 @@
     "zod": "^3.25.76 || ^4"
   },
   "peerDependencies": {
-    "@diffbot/typescript": "^0.1.0",
+    "@diffbot/typescript": "^0.2.0",
     "@langchain/core": "^1.0.0"
   },
   "devDependencies": {
-    "@diffbot/typescript": "^0.1.0",
+    "@diffbot/typescript": "^0.2.0",
     "@eslint/js": "^9.20.0",
     "@langchain/core": "^1.2.5",
     "@types/node": "^22.15.21",

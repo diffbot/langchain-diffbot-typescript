@@ -66,3 +66,11 @@ export {
   type DocumentMapper,
   type ShapedExtractResponse,
 } from "./base.js";
+
+/*
+  Re-exported so users configuring DiffbotOntologyTool's `ontologyStore` don't
+  need a second import from @diffbot/typescript for a type they only touch
+  because of us. Not re-exporting the classes as values: this package is a
+  thin layer that calls the SDK directly, not a wrapper that mirrors it.
+*/
+export type { OntologyStore, KVOntologyStore } from "@diffbot/typescript";

@@ -45,3 +45,27 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
       - run: pnpm build
+
+  workers:
+    name: cloudflare worker fixture
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm install
+        working-directory: fixtures/worker
+      # --dry-run needs no Cloudflare credentials, so this runs on fork PRs too.
+      # This is the load-bearing check: it proves the real bundler needs no
+      # compatibility_flags, using wrangler.jsonc's empty array.
+      - run: pnpm exec wrangler deploy --dry-run --outdir .wrangler-build
+        working-directory: fixtures/worker
+      # `pnpm test` (vitest-pool-workers) is intentionally not run here yet —
+      # see fixtures/worker/vitest.config.ts for why: an upstream Vite bug
+      # (vitejs/vite#18340) breaks resolution of langsmith's legacy `browser`
+      # field, unrelated to this package. Re-enable once that lands.

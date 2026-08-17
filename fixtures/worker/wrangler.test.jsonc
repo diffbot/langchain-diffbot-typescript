@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "diffbot-langchain-worker-fixture",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-04-01",
+  // Only this test config carries nodejs_compat, and only because
+  // @cloudflare/vitest-pool-workers needs it for its own internals — the
+  // fixture under test (wrangler.jsonc) stays flag-free.
+  "compatibility_flags": ["nodejs_compat"],
+  "kv_namespaces": [{ "binding": "ONTOLOGY", "id": "fixture" }]
+}

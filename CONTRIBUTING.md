@@ -5,9 +5,10 @@
 - Node.js >= 20 (see `engines.node` in `package.json`)
 - [pnpm](https://pnpm.io/)
 
-This package requires a Node.js runtime — it is not meant to run in a browser
-or edge runtime. The underlying `@diffbot/typescript` SDK statically imports
-`node:fs`, `node:os`, and `node:path`.
+Node.js is required to build and install this package. At runtime it isn't
+Node-only: `@diffbot/typescript`'s main entry imports no node builtins, so
+this package runs in a Cloudflare Worker with no compatibility flags — see
+`fixtures/worker/` and the "Cloudflare Workers" section of `CLAUDE.md`.
 
 ## Getting started
 
@@ -26,8 +27,20 @@ pnpm build         # tsup — builds dist/
 ```
 
 Run these before opening a PR. CI (`.github/workflows/ci.yml`) runs `pnpm lint`
-and `pnpm typecheck` once (Node 22), then `pnpm test` and `pnpm build` across
-the Node 20 / 22 / 24 matrix.
+and `pnpm typecheck` once (Node 22), `pnpm test` and `pnpm build` across the
+Node 20 / 22 / 24 matrix, and a `workers` job that builds `fixtures/worker/`
+with `wrangler deploy --dry-run` to prove the package needs no Cloudflare
+compatibility flags.
+
+## Cloudflare Worker fixture
+
+```
+pnpm build                        # fixture resolves the package through dist/
+cd fixtures/worker
+pnpm install
+pnpm exec wrangler deploy --dry-run   # the CI check — no Cloudflare credentials needed
+pnpm exec vitest run                  # runs in workerd; see vitest.config.ts for a known, unrelated blocker
+```
 
 ## Live/integration tests
 

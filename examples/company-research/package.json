@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@diffbot/langchain": "link:../..",
-    "@diffbot/typescript": "^0.1.0",
+    "@diffbot/typescript": "^0.2.0",
     "@langchain/anthropic": "^1.5.4",
     "@langchain/core": "^1.2.5",
     "dotenv": "^17.2.3",

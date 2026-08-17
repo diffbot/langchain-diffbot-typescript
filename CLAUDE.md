@@ -16,7 +16,7 @@ LangChain.js integration package for the Diffbot APIs (Knowledge Graph, Extract,
 
 ### Thin layer over @diffbot/typescript
 
-Every public class calls a `@diffbot/typescript` function directly. There is no wrapper mirroring the SDK, no transport of our own, no retry or caching layer beyond the one documented exception (the ontology cache). Adding a LangChain surface for a new SDK function should be a single new file plus one line in the barrel — no plumbing edits.
+Every public class calls a `@diffbot/typescript` function directly. There is no wrapper mirroring the SDK, no transport of our own, no retry or caching layer of this package's own — the one exception, ontology caching, lives in the SDK's `OntologyStore` (see below), not here. Adding a LangChain surface for a new SDK function should be a single new file plus one line in the barrel — no plumbing edits.
 
 Each class accepts the SDK's option names as-is (`from`, `filter`, `format`, `exportspec`, `extra`, `maxTokens`, `api`, `fmt`, `lang`). The only renames are LangChain-convention: `size` → `k` on the KG retriever, `numResults` → `k` on the web-search retriever.
 
@@ -77,23 +77,30 @@ Both retrievers accept `fields` (metadata allowlist), `contentFields` (priority 
 
 An agent that writes DQL from memory guesses field names, and a guessed field name returns zero results rather than an error — a silent failure that looks like an answer. Two tools close that gap:
 
-- `DiffbotOntologyTool` — navigates the KG ontology (`dqlFetchOntology(client)` → `Ontology`). It fetches once over HTTP and caches in memory on the tool instance. What is cached is the in-flight **promise**, not the resolved `Ontology`, so concurrent first calls share one request; a rejected fetch clears the cache so the next call retries. Recoverable failures (unknown type, missing argument) are returned as `{ error, hint }` instead of thrown, so an agent can correct itself.
+- `DiffbotOntologyTool` — navigates the KG ontology via an SDK `OntologyStore` (`ontologyStore.load({ refresh })` → `Ontology`). Defaults to `new OntologyStore(client)`, an in-memory cache for the tool instance's lifetime — the promise-caching and rejection-clears-the-cache behavior this used to implement itself now lives in that class. Pass `ontologyStore: new KVOntologyStore(client, kv)` for a durable cache across instances (a Cloudflare Worker's recycled isolates, for example). Recoverable failures (unknown type, missing argument) are returned as `{ error, hint }` instead of thrown, so an agent can correct itself.
 - `DiffbotDQLProbeTool` — wraps `dqlParallel()` to probe query variants at `size: 0` (hit counts only), so an agent can check selectivity before committing.
 
 The intended agent loop is **introspect (ontology) → probe → run (`DiffbotKnowledgeGraphTool`) → refine**.
 
 ### Admin / utility SDK functions are not wrapped
 
-`crawlListJobs`, `crawlGetJob`, `crawlDeleteJob`, and `dqlRefreshOntology` don't fit as LangChain primitives — they are not retrievers, loaders, tools, or chat models, and forcing them into one of those shapes would be worse than leaving them out. They stay unwrapped, but every component exposes its `.client`, so users can call them directly: `await crawlListJobs(loader.client)`.
+`crawlListJobs`, `crawlGetJob`, and `crawlDeleteJob` don't fit as LangChain primitives — they are not retrievers, loaders, tools, or chat models, and forcing them into one of those shapes would be worse than leaving them out. They stay unwrapped, but every component exposes its `.client`, so users can call them directly: `await crawlListJobs(loader.client)`.
+
+### Cloudflare Workers
+
+This package runs in a Worker with **no compatibility flags required** — verified in CI by `fixtures/worker/` (`wrangler deploy --dry-run` against an empty `compatibility_flags` array). That property comes entirely from `@diffbot/typescript`: its main entry imports no node builtins and has no import-time side effects (enforced there via `platform: "neutral"` in its build and a post-build grep). This package's own `src/` has never had a node builtin dependency; the only historical blocker was transitive.
+
+Two things change in a Worker, both because there's no filesystem: token resolution uses `resolveTokenFromEnv(undefined, env)` instead of `resolveToken` (the credentials-file version lives behind `@diffbot/typescript/node`, which this package never imports), and `DiffbotOntologyTool`'s cache should be backed by `KVOntologyStore` rather than the in-memory default, since Worker isolates recycle between requests.
+
+`fixtures/worker/vitest.config.ts` documents a known, upstream, unrelated limitation: `@cloudflare/vitest-pool-workers` can't run this fixture's full test suite yet because of a Vite bug in resolving `langsmith`'s legacy `browser` field (vitejs/vite#18340). The `wrangler deploy --dry-run` check is unaffected and is what CI relies on.
 
 ## Differences from the Python package
 
-Four intentional divergences. All four are documented in `README.md` under `## Differences from the Python package`; keep the two in sync.
+Three intentional divergences. All three are documented in `README.md` under `## Differences from the Python package`; keep the two in sync.
 
 1. **`k` is constructor-only on both retrievers.** Python allows `retriever.invoke(query, k=3)`. LangChain.js defines the hook as `_getRelevantDocuments(query, runManager)` — a fixed signature with no kwargs channel — so a per-call `k` has nowhere to travel. `resolveK()` therefore validates once at construction rather than per call. The tools are unaffected: `size` / `numResults` live in their zod call schemas, which _are_ a per-call channel.
-2. **Node only — no browser, edge, or Workers.** `@diffbot/typescript` ships a single barrel that statically imports `node:fs`, `node:os`, and `node:path`, so merely importing it pulls `node:*` in. There is no tree-shaking path around it and no browser shim. `engines.node` is `>=20`.
-3. **KG and ontology URLs are not overridable.** `DiffbotClient` honors `analyzeUrl`, `llmUrl`, `crawlerUrl`, `webSearchUrl`, and `nlpUrl`, but the SDK's `dql`, `dqlParallel`, and `dqlFetchOntology` read `KG_DQL_ENDPOINT` / `KG_ONTOLOGY_ENDPOINT` from module constants rather than from the client. Only an injected `fetch` can redirect that traffic. This is why the README's KG examples and the test suites mock at the `fetch` layer rather than pointing the client at a local server.
-4. **`DiffbotOntologyTool` supports `refresh: true`.** The Python tool's docstring promises a cache-busting argument that was never implemented. Here `refresh` is a real field on the call schema: it clears the cached ontology promise before the op runs.
+2. **KG and ontology URLs are not overridable.** `DiffbotClient` honors `analyzeUrl`, `llmUrl`, `crawlerUrl`, `webSearchUrl`, and `nlpUrl`, but the SDK's `dql`, `dqlParallel`, and `dqlFetchOntology` read `KG_DQL_ENDPOINT` / `KG_ONTOLOGY_ENDPOINT` from module constants rather than from the client. Only an injected `fetch` can redirect that traffic. This is why the README's KG examples and the test suites mock at the `fetch` layer rather than pointing the client at a local server.
+3. **`DiffbotOntologyTool` supports `refresh: true`.** The Python tool's docstring promises a cache-busting argument that was never implemented. Here `refresh` is a real field on the call schema: it passes `{ refresh: true }` through to `ontologyStore.load()`, which discards the cache and re-fetches before the op runs.
 
 Beyond those four, names track the SDK where it and the Python package disagree: `from` (not `from_` — TypeScript has no keyword conflict), `numResults`, `maxTokens`, `contentFields`, `documentMapper`.
 
