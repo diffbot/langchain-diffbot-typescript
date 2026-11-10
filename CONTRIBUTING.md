@@ -49,10 +49,11 @@ DIFFBOT_API_TOKEN=your-token pnpm test:live
 ```
 
 `test:live` hits the real Diffbot APIs and consumes real quota. In CI
-(`.github/workflows/integration.yml`) it only runs on a nightly schedule and
-via manual `workflow_dispatch` — never on `push` or `pull_request`. Neither of
-those two triggers can be invoked by a fork PR, so the repo-level
-`DIFFBOT_API_TOKEN` secret is never exposed to untrusted code.
+(`.github/workflows/integration.yml`) it runs on push to `main`, on a
+twice-monthly drift schedule (1st and 15th), and via manual
+`workflow_dispatch` — never on `pull_request`. Fork PRs cannot push to
+`main` or dispatch this workflow, so the repo-level `DIFFBOT_API_TOKEN`
+secret is never exposed to untrusted code.
 
 ## Layout convention
 

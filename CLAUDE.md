@@ -130,7 +130,7 @@ Run `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm exec prettier --check 
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs on every push and PR: `pnpm lint` + `pnpm typecheck` once, then `pnpm test` and `pnpm build` across the Node 20 / 22 / 24 matrix. `.github/workflows/integration.yml` runs the live suite nightly and on `workflow_dispatch` only — neither trigger can be fired by a fork PR, so the repo-level `DIFFBOT_API_TOKEN` secret is never exposed to untrusted code.
+`.github/workflows/ci.yml` runs on every push and PR: `pnpm lint` + `pnpm typecheck` once, then `pnpm test` and `pnpm build` across the Node 20 / 22 / 24 matrix. `.github/workflows/integration.yml` runs the live suite on push to `main`, on a twice-monthly drift schedule (1st and 15th at 14:17 UTC), and on `workflow_dispatch`. It does not run on `pull_request`, so the repo-level `DIFFBOT_API_TOKEN` secret is never exposed to fork PR code.
 
 ## Releasing
 

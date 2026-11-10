@@ -7,7 +7,7 @@
 
   DiffbotCrawlLoader is deliberately not tested here: a real crawl job is
   slow (it runs asynchronously against Diffbot's crawler infrastructure) and
-  costly in quota, and would make the nightly live run unreliable and slow.
+  costly in quota, and would make the scheduled live run unreliable and slow.
 */
 
 import { describe, expect, it } from "vitest";
