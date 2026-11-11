@@ -4,7 +4,8 @@
   assertions are shape-based rather than content-based: non-empty results,
   correct types, and requested metadata keys, never a specific company or
   page. Requires DIFFBOT_API_TOKEN; the whole suite is skipped when it is
-  unset (see vitest.live.config.ts for how this file is picked up).
+  unset, empty, or whitespace-only (see vitest.live.config.ts for how this
+  file is picked up).
 */
 
 import { describe, expect, it } from "vitest";
@@ -12,8 +13,9 @@ import { DiffbotClient } from "@diffbot/typescript";
 import { Document } from "@langchain/core/documents";
 import { DiffbotKnowledgeGraphRetriever } from "../../src/retrievers/knowledge-graph.js";
 import { DiffbotWebSearchRetriever } from "../../src/retrievers/web-search.js";
+import { diffbotLiveClientToken, resolveDiffbotLiveToken } from "../helpers/live-token.js";
 
-const token = process.env.DIFFBOT_API_TOKEN;
+const token = resolveDiffbotLiveToken(process.env.DIFFBOT_API_TOKEN);
 
 /*
   Built even when `token` is undefined, since `describe.skipIf` still
@@ -21,7 +23,7 @@ const token = process.env.DIFFBOT_API_TOKEN;
   non-empty token string at construction, so fall back to a placeholder
   that is never actually used because the tests it backs are skipped.
 */
-const client = new DiffbotClient({ token: token ?? "unused-token-suite-skipped" });
+const client = new DiffbotClient({ token: diffbotLiveClientToken(token) });
 
 describe.skipIf(!token)("DiffbotKnowledgeGraphRetriever (live)", () => {
   it("returns Documents narrowed to the requested fields", async () => {

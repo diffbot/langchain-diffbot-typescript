@@ -2,16 +2,17 @@
   Live integration tests against the real Diffbot LLM RAG (`ask`) endpoint.
   These hit a live, changing answer source and consume API quota, so
   assertions are shape-based rather than content-based. Requires
-  DIFFBOT_API_TOKEN; the whole suite is skipped when it is unset (see
-  vitest.live.config.ts for how this file is picked up).
+  DIFFBOT_API_TOKEN; the whole suite is skipped when it is unset, empty, or
+  whitespace-only (see vitest.live.config.ts for how this file is picked up).
 */
 
 import { describe, expect, it } from "vitest";
 import { DiffbotClient } from "@diffbot/typescript";
 import { AIMessage, AIMessageChunk, HumanMessage } from "@langchain/core/messages";
 import { ChatDiffbot } from "../../src/chat_models.js";
+import { diffbotLiveClientToken, resolveDiffbotLiveToken } from "../helpers/live-token.js";
 
-const token = process.env.DIFFBOT_API_TOKEN;
+const token = resolveDiffbotLiveToken(process.env.DIFFBOT_API_TOKEN);
 
 /*
   Built even when `token` is undefined, since `describe.skipIf` still
@@ -26,7 +27,7 @@ const token = process.env.DIFFBOT_API_TOKEN;
   timeout in production too, not just in tests.
 */
 const client = new DiffbotClient({
-  token: token ?? "unused-token-suite-skipped",
+  token: diffbotLiveClientToken(token),
   timeout: 120_000,
 });
 

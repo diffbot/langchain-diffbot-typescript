@@ -2,8 +2,8 @@
   Live integration tests against the real Diffbot APIs. These hit a live,
   changing Knowledge Graph and live web, and consume API quota, so
   assertions are shape-based rather than content-based. Requires
-  DIFFBOT_API_TOKEN; the whole suite is skipped when it is unset (see
-  vitest.live.config.ts for how this file is picked up).
+  DIFFBOT_API_TOKEN; the whole suite is skipped when it is unset, empty, or
+  whitespace-only (see vitest.live.config.ts for how this file is picked up).
 */
 
 import { describe, expect, it } from "vitest";
@@ -15,8 +15,9 @@ import { DiffbotKnowledgeGraphTool } from "../../src/tools/knowledge-graph.js";
 import { DiffbotOntologyTool } from "../../src/tools/ontology.js";
 import { DiffbotDQLProbeTool } from "../../src/tools/dql-probe.js";
 import { DiffbotAskTool } from "../../src/tools/ask.js";
+import { diffbotLiveClientToken, resolveDiffbotLiveToken } from "../helpers/live-token.js";
 
-const token = process.env.DIFFBOT_API_TOKEN;
+const token = resolveDiffbotLiveToken(process.env.DIFFBOT_API_TOKEN);
 
 /*
   Built even when `token` is undefined, since `describe.skipIf` still
@@ -30,7 +31,7 @@ const token = process.env.DIFFBOT_API_TOKEN;
   /KG calls in this file are all fast, but they share the one client.
 */
 const client = new DiffbotClient({
-  token: token ?? "unused-token-suite-skipped",
+  token: diffbotLiveClientToken(token),
   timeout: 120_000,
 });
 

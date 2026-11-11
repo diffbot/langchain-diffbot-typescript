@@ -2,8 +2,8 @@
   Live integration tests against the real Diffbot Extract API. These hit a
   live, changing web, and consume API quota, so assertions are shape-based
   rather than content-based. Requires DIFFBOT_API_TOKEN; the whole suite is
-  skipped when it is unset (see vitest.live.config.ts for how this file is
-  picked up).
+  skipped when it is unset, empty, or whitespace-only (see vitest.live.config.ts
+  for how this file is picked up).
 
   DiffbotCrawlLoader is deliberately not tested here: a real crawl job is
   slow (it runs asynchronously against Diffbot's crawler infrastructure) and
@@ -14,8 +14,9 @@ import { describe, expect, it } from "vitest";
 import { DiffbotClient } from "@diffbot/typescript";
 import { Document } from "@langchain/core/documents";
 import { DiffbotExtractLoader } from "../../src/loaders/extract.js";
+import { diffbotLiveClientToken, resolveDiffbotLiveToken } from "../helpers/live-token.js";
 
-const token = process.env.DIFFBOT_API_TOKEN;
+const token = resolveDiffbotLiveToken(process.env.DIFFBOT_API_TOKEN);
 
 /*
   Built even when `token` is undefined, since `describe.skipIf` still
@@ -23,7 +24,7 @@ const token = process.env.DIFFBOT_API_TOKEN;
   non-empty token string at construction, so fall back to a placeholder
   that is never actually used because the tests it backs are skipped.
 */
-const client = new DiffbotClient({ token: token ?? "unused-token-suite-skipped" });
+const client = new DiffbotClient({ token: diffbotLiveClientToken(token) });
 
 describe.skipIf(!token)("DiffbotExtractLoader (live)", () => {
   it("loads one Document per URL with the requested url in metadata", async () => {
