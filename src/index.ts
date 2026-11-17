@@ -16,7 +16,10 @@ export {
 export {
   DiffbotCrawlLoader,
   defaultCrawlMapper,
+  defaultCrawlRecordMapper,
   type CrawlEventMapper,
+  type CrawlRecordMapper,
+  type DiffbotCrawlDownloadOptions,
   type DiffbotCrawlLoaderFields,
 } from "./loaders/crawl.js";
 

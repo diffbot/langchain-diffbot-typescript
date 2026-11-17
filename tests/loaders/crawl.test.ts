@@ -157,3 +157,133 @@ describe("DiffbotCrawlLoader end-to-end with watch: true (the default)", () => {
     expect(docs[1]!.pageContent).toBe("https://example.com/page2");
   });
 });
+
+describe("DiffbotCrawlLoader download mode (non-watch crawlDownload)", () => {
+  const RECORDS = [
+    {
+      pageUrl: "https://example.com/a",
+      title: "A",
+      type: "article",
+      content: "Body A",
+      token: "test-token",
+      timestamp: "2026-01-01T00:00:00Z",
+    },
+    { pageUrl: "https://example.com/b", title: "B", type: "article", content: "Body B" },
+  ];
+
+  it("creates the job, polls until finished, then downloads records as Documents", async () => {
+    const kinds: string[] = [];
+    let statusCalls = 0;
+    const db = makeClient((req) => {
+      if (req.url.endsWith("/data")) {
+        kinds.push("data");
+        expect(req.params.get("name")).toBe("dl-job");
+        expect(req.params.get("num")).toBe("5");
+        expect(req.params.get("type")).toBeNull();
+        return jsonResponse(RECORDS);
+      }
+      if (req.params.get("seeds")) {
+        kinds.push("create");
+        return jsonResponse({ jobs: [{ name: "dl-job" }] });
+      }
+      kinds.push("status");
+      statusCalls += 1;
+      /* First poll still running (status 7), second poll done. */
+      return jsonResponse({
+        jobs: [{ jobStatus: statusCalls === 1 ? { status: 7 } : { status: 9, message: "done" } }],
+      });
+    });
+
+    const docs = await new DiffbotCrawlLoader({
+      client: db,
+      site: "https://example.com",
+      crawlOptions: { jobName: "dl-job" },
+      download: { num: 5, pollInterval: 1 },
+    }).load();
+
+    expect(kinds).toEqual(["create", "status", "status", "data"]);
+    expect(docs.map((d) => d.pageContent)).toEqual(["Body A", "Body B"]);
+    expect(docs[0]!.metadata.url).toBe("https://example.com/a");
+    /* The echoed token must never reach metadata. */
+    expect(JSON.stringify(docs)).not.toContain("test-token");
+  });
+
+  it("downloads an already-finished job without creating one", async () => {
+    const kinds: string[] = [];
+    const db = makeClient((req) => {
+      if (req.url.endsWith("/data")) {
+        kinds.push("data");
+        return jsonResponse(RECORDS);
+      }
+      expect(req.params.get("seeds")).toBeNull();
+      kinds.push("status");
+      return jsonResponse({ jobs: [{ jobStatus: { status: 9, message: "done" } }] });
+    });
+
+    const docs = await new DiffbotCrawlLoader({
+      client: db,
+      download: { jobName: "old-job" },
+    }).load();
+
+    expect(kinds).toEqual(["status", "data"]);
+    expect(docs).toHaveLength(2);
+  });
+
+  it("applies a custom recordMapper and skips nulls", async () => {
+    const db = makeClient((req) =>
+      req.url.endsWith("/data")
+        ? jsonResponse(RECORDS)
+        : jsonResponse({ jobs: [{ jobStatus: { status: 9, message: "done" } }] }),
+    );
+    const docs = await new DiffbotCrawlLoader({
+      client: db,
+      download: {
+        jobName: "old-job",
+        recordMapper: (r) =>
+          r.title === "A" ? new Document({ pageContent: String(r.title) }) : null,
+      },
+    }).load();
+    expect(docs.map((d) => d.pageContent)).toEqual(["A"]);
+  });
+
+  it("throws when the finished job reports a failure", async () => {
+    const db = makeClient(() =>
+      jsonResponse({ jobs: [{ jobStatus: { status: 5, message: "Job failed: bad seed" } }] }),
+    );
+    await expect(
+      new DiffbotCrawlLoader({ client: db, download: { jobName: "bad" } }).load(),
+    ).rejects.toThrow(/failed/);
+  });
+
+  it("throws when the job does not exist", async () => {
+    const db = makeClient(() => jsonResponse({ jobs: [] }));
+    await expect(
+      new DiffbotCrawlLoader({ client: db, download: { jobName: "nope" } }).load(),
+    ).rejects.toThrow(/not found/);
+  });
+
+  it("gives up after maxWait", async () => {
+    const db = makeClient(() => jsonResponse({ jobs: [{ jobStatus: { status: 7 } }] }));
+    await expect(
+      new DiffbotCrawlLoader({
+        client: db,
+        download: { jobName: "slow", pollInterval: 5, maxWait: 1 },
+      }).load(),
+    ).rejects.toThrow(/did not finish/);
+  });
+
+  it("requires site or download.jobName", () => {
+    expect(() => new DiffbotCrawlLoader({ client: makeClient(() => jsonResponse({})) })).toThrow(
+      /site/,
+    );
+  });
+
+  it("leaves the default watch behavior alone when download is unset", () => {
+    const loader = new DiffbotCrawlLoader({
+      client: makeClient(() => jsonResponse({})),
+      site: "https://example.com",
+    });
+    expect(loader.download).toBeUndefined();
+    expect(loader.crawlOptions.watch).toBe(true);
+  });
+});
