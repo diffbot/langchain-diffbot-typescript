@@ -9,11 +9,17 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const SIBLING = path.resolve(__dirname, "..", "diffbot-typescript");
+/*
+  DIFFBOT_TS_SDK_PATH overrides the sibling checkout, e.g. to point at a scratch
+  build when the sibling's dist/ is stale.
+*/
+const SIBLING = process.env.DIFFBOT_TS_SDK_PATH
+  ? path.resolve(process.env.DIFFBOT_TS_SDK_PATH)
+  : path.resolve(__dirname, "..", "diffbot-typescript");
 
 function readPackage(pkg) {
   if (pkg.name === "@diffbot/langchain" && fs.existsSync(path.join(SIBLING, "package.json"))) {
-    pkg.devDependencies = { ...pkg.devDependencies, "@diffbot/typescript": "link:../diffbot-typescript" };
+    pkg.devDependencies = { ...pkg.devDependencies, "@diffbot/typescript": `link:${path.relative(__dirname, SIBLING)}` };
   }
   return pkg;
 }

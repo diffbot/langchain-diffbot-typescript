@@ -105,4 +105,26 @@ describe("DiffbotExtractTool", () => {
     const tool = toolWith(() => jsonResponse({ message: "bad token" }, 401));
     await expect(tool.invoke({ url: "https://example.com" })).rejects.toThrow(/401/);
   });
+
+  it("threads constructor extractOptions through to the wire", async () => {
+    const tool = new DiffbotExtractTool({
+      client: new DiffbotClient({
+        token: "test-token",
+        fetch: createMockFetch((req) => {
+          expect(req.params.get("timeout")).toBe("5000");
+          expect(req.params.get("fields")).toBe("title,text");
+          expect(req.params.get("paging")).toBe("false");
+          /* Defaults for api / fmt are unchanged. */
+          expect(req.url).toBe("https://api.diffbot.com/v3/analyze");
+          expect(req.params.get("mode")).toBe("llm");
+          return jsonResponse({ objects: [{ text: "Body." }] });
+        }),
+      }),
+      extractOptions: { timeout: 5000, fields: ["title", "text"], paging: false },
+    });
+
+    await expect(tool.invoke({ url: "https://example.com" })).resolves.toMatchObject({
+      content: "Body.",
+    });
+  });
 });

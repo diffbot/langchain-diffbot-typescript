@@ -6,7 +6,12 @@
   and pass it in. URLs are extracted serially, in order.
 */
 
-import { extract, type DiffbotClient, type JsonObject } from "@diffbot/typescript";
+import {
+  extract,
+  type DiffbotClient,
+  type ExtractOptions,
+  type JsonObject,
+} from "@diffbot/typescript";
 import { BaseDocumentLoader } from "@langchain/core/document_loaders/base";
 import { Document } from "@langchain/core/documents";
 import { assertClient, shapeExtractResponse, type DiffbotComponentFields } from "../base.js";
@@ -35,6 +40,8 @@ export interface DiffbotExtractLoaderFields extends DiffbotComponentFields {
   api?: string;
   /* Output format. `markdown` uses Diffbot's LLM-optimized mode. */
   fmt?: string;
+  /* SDK `ExtractOptions` (`timeout`, `mode`, `fields`, `paging`, ...) applied to every URL. */
+  extractOptions?: ExtractOptions;
   /* Optional `(url, rawResponse) -> Document` override. */
   documentMapper?: ExtractDocumentMapper;
 }
@@ -59,6 +66,7 @@ export class DiffbotExtractLoader extends BaseDocumentLoader {
   urls: string[];
   api: string;
   fmt: string;
+  extractOptions?: ExtractOptions;
   documentMapper?: ExtractDocumentMapper;
 
   constructor(fields: DiffbotExtractLoaderFields) {
@@ -67,6 +75,7 @@ export class DiffbotExtractLoader extends BaseDocumentLoader {
     this.urls = fields.urls;
     this.api = fields.api ?? "analyze";
     this.fmt = fields.fmt ?? "markdown";
+    this.extractOptions = fields.extractOptions;
     this.documentMapper = fields.documentMapper;
   }
 
@@ -84,7 +93,7 @@ export class DiffbotExtractLoader extends BaseDocumentLoader {
   */
   async *lazyLoad(): AsyncGenerator<Document> {
     for (const url of this.urls) {
-      const raw = await extract(this.client, url, this.api, this.fmt);
+      const raw = await extract(this.client, url, this.api, this.fmt, this.extractOptions);
       yield this.toDoc(url, raw);
     }
   }

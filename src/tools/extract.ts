@@ -1,4 +1,9 @@
-import { extract, ExtractionError, type DiffbotClient } from "@diffbot/typescript";
+import {
+  extract,
+  ExtractionError,
+  type DiffbotClient,
+  type ExtractOptions,
+} from "@diffbot/typescript";
 import { StructuredTool, type ToolParams } from "@langchain/core/tools";
 import type { InferInteropZodOutput } from "@langchain/core/utils/types";
 import { z } from "zod/v3";
@@ -29,7 +34,14 @@ export interface DiffbotExtractToolError {
 
 export type DiffbotExtractToolOutput = ShapedExtractResponse | DiffbotExtractToolError;
 
-export interface DiffbotExtractToolFields extends ToolParams, DiffbotComponentFields {}
+export interface DiffbotExtractToolFields extends ToolParams, DiffbotComponentFields {
+  /*
+    SDK `ExtractOptions` (`timeout`, `mode`, `fields`, `fallback`, `paging`, ...)
+    applied to every call. Fixed at construction rather than exposed in the call
+    schema: they are operator knobs, and the agent only picks the URL.
+  */
+  extractOptions?: ExtractOptions;
+}
 
 /*
   Tool that extracts structured content from a URL via Diffbot's analyze API.
@@ -64,15 +76,17 @@ export class DiffbotExtractTool extends StructuredTool<
   schema = schema;
 
   client: DiffbotClient;
+  extractOptions?: ExtractOptions;
 
   constructor(fields: DiffbotExtractToolFields) {
     super(fields);
     this.client = assertClient(fields.client);
+    this.extractOptions = fields.extractOptions;
   }
 
   async _call(input: InferInteropZodOutput<typeof schema>): Promise<DiffbotExtractToolOutput> {
     try {
-      const raw = await extract(this.client, input.url, input.api, input.fmt);
+      const raw = await extract(this.client, input.url, input.api, input.fmt, this.extractOptions);
       return shapeExtractResponse(raw);
     } catch (e) {
       /*
