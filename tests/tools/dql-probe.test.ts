@@ -28,10 +28,10 @@ describe("DiffbotDQLProbeTool", () => {
   it("probes each variant at size=0 and returns hit counts in input order", async () => {
     const db = makeClient((req) => {
       expect(req.url).toBe(DQL_URL);
-      expect(req.method).toBe("GET");
+      expect(req.method).toBe("POST");
       /* size=0 is the whole point: match counts, no entity payload. */
-      expect(req.params.get("size")).toBe("0");
-      const query = req.params.get("query") ?? "";
+      expect(req.json?.size).toBe(0);
+      const query = String(req.json?.query ?? "");
       const hits = query.includes("Diffbot") ? 5 : 100;
       return jsonResponse({ hits, results: 0 });
     });
@@ -49,7 +49,7 @@ describe("DiffbotDQLProbeTool", () => {
   it("preserves input order when responses come back out of order", async () => {
     const queries = ["q0", "q1", "q2", "q3"];
     const db = makeClient(async (req) => {
-      const query = req.params.get("query") ?? "";
+      const query = String(req.json?.query ?? "");
       /* Later queries answer first, so positional zipping is really tested. */
       const delay = (queries.length - queries.indexOf(query)) * 5;
       await new Promise((resolve) => setTimeout(resolve, delay));

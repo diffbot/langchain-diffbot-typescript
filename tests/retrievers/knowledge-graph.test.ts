@@ -67,8 +67,8 @@ describe("DiffbotKnowledgeGraphRetriever document mapping", () => {
   it("maps nested {score, entity} hits into documents", async () => {
     const db = makeClient((req) => {
       expect(req.url).toBe(DQL_URL);
-      expect(req.method).toBe("GET");
-      expect(req.params.get("query")).toBe("type:Organization");
+      expect(req.method).toBe("POST");
+      expect(req.json?.query).toBe("type:Organization");
       return jsonResponse(SAMPLE_BODY);
     });
     const docs = await new DiffbotKnowledgeGraphRetriever({
@@ -227,7 +227,7 @@ describe("DiffbotKnowledgeGraphRetriever document mapping", () => {
 describe("DiffbotKnowledgeGraphRetriever request wiring", () => {
   it("sends k as the size wire param", async () => {
     const db = makeClient((req) => {
-      expect(req.params.get("size")).toBe("3");
+      expect(req.json?.size).toBe(3);
       return jsonResponse(SAMPLE_BODY);
     });
     await new DiffbotKnowledgeGraphRetriever({ client: db, k: 3 }).invoke("type:Organization");
@@ -235,7 +235,7 @@ describe("DiffbotKnowledgeGraphRetriever request wiring", () => {
 
   it("defaults size to 10 when k is not given", async () => {
     const db = makeClient((req) => {
-      expect(req.params.get("size")).toBe("10");
+      expect(req.json?.size).toBe(10);
       return jsonResponse(SAMPLE_BODY);
     });
     await new DiffbotKnowledgeGraphRetriever({ client: db }).invoke("type:Organization");
@@ -260,13 +260,13 @@ describe("DiffbotKnowledgeGraphRetriever request wiring", () => {
 
   it("sends from, filter, exportspec and extra as wire params", async () => {
     const db = makeClient((req) => {
-      expect(req.params.get("size")).toBe("5");
-      expect(req.params.get("from")).toBe("10");
-      expect(req.params.get("filter")).toBe("type:Organization");
-      expect(req.params.get("exportspec")).toBe("csv-spec");
-      expect(req.params.get("revision")).toBe("2024-01");
+      expect(req.json?.size).toBe(5);
+      expect(req.json?.from).toBe(10);
+      expect(req.json?.filter).toBe("type:Organization");
+      expect(req.json?.exportspec).toBe("csv-spec");
+      expect(req.json?.revision).toBe("2024-01");
       /* `format` defaults to json, which the SDK omits from the wire. */
-      expect(req.params.get("format")).toBeNull();
+      expect(req.json?.format).toBeUndefined();
       return jsonResponse(SAMPLE_BODY);
     });
     await new DiffbotKnowledgeGraphRetriever({
@@ -302,7 +302,7 @@ describe("DiffbotKnowledgeGraphRetriever request wiring", () => {
 
   it("throws when the endpoint returns a non-JSON-object body", async () => {
     const db = makeClient((req) => {
-      expect(req.params.get("format")).toBe("csv");
+      expect(req.json?.format).toBe("csv");
       /* A CSV export is not a JSON object, so the retriever refuses it. */
       return jsonResponse("id,name\nE1,Acme AI");
     });
