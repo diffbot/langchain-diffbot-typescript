@@ -19,7 +19,10 @@ const SIBLING = process.env.DIFFBOT_TS_SDK_PATH
 
 function readPackage(pkg) {
   if (pkg.name === "@diffbot/langchain" && fs.existsSync(path.join(SIBLING, "package.json"))) {
-    pkg.devDependencies = { ...pkg.devDependencies, "@diffbot/typescript": `link:${path.relative(__dirname, SIBLING)}` };
+    pkg.devDependencies = {
+      ...pkg.devDependencies,
+      "@diffbot/typescript": `link:${path.relative(__dirname, SIBLING)}`,
+    };
   }
   return pkg;
 }
