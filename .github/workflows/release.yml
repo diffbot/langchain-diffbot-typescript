@@ -8,11 +8,11 @@ on:
     tags: ["v*"]
   workflow_dispatch:
 
-# Re-pushing a tag (or re-dispatching) cancels an in-flight run for the same
-# ref so a stuck build can't pile up behind a newer attempt.
+# Never cancel an in-flight run: cancelling a publish midway could leave npm
+# and the GitHub Release out of sync. Runs for the same ref queue instead.
 concurrency:
   group: release-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -48,7 +48,7 @@ jobs:
       - name: Build
         run: pnpm build
 
-      # Bundle everything `pnpm publish` needs (package.json, README, LICENSE,
+      # Bundle everything `npm publish` needs (package.json, README, LICENSE,
       # dist/) so the publish job below can run without checking out the repo.
       - name: Assemble publishable package
         run: |
@@ -83,17 +83,24 @@ jobs:
       - name: List artifact contents
         run: ls -lR package
 
-      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           registry-url: "https://registry.npmjs.org"
 
+      # npm trusted publishing (OIDC) needs npm >= 11.5.1; Node 22 ships older.
+      - name: Update npm
+        run: |
+          npm install -g npm@latest
+          npm --version
+
+      # Uses npm (not pnpm) so the OIDC token exchange works. No token is set:
+      # npm authenticates via the trusted publisher configured on npmjs.com.
+      # --ignore-scripts: the package was already built in the build job, and
+      # package.json's prepublishOnly calls pnpm/tsup, absent in this job.
       - name: Publish to npm
         working-directory: package
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: pnpm publish --access public --no-git-checks --provenance
+        run: npm publish --access public --provenance --ignore-scripts
 
       - name: Publish GitHub Release
         env:
