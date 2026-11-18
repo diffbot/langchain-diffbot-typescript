@@ -1,6 +1,6 @@
 # @diffbot/langchain
 
-[![CI](https://github.com/diffbot/diffbot-langchain-typescript/actions/workflows/ci.yml/badge.svg)](https://github.com/diffbot/diffbot-langchain-typescript/actions/workflows/ci.yml)
+[![CI](https://github.com/diffbot/langchain-diffbot-typescript/actions/workflows/ci.yml/badge.svg)](https://github.com/diffbot/langchain-diffbot-typescript/actions/workflows/ci.yml)
 
 A thin LangChain.js integration over the official [`@diffbot/typescript`](https://github.com/diffbot/diffbot-typescript) SDK. Every Diffbot API gets the closest LangChain primitive:
 
