@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/diffbot/langchain-diffbot-typescript/actions/workflows/ci.yml/badge.svg)](https://github.com/diffbot/langchain-diffbot-typescript/actions/workflows/ci.yml)
 
+**Docs:** this README is the canonical reference. Listed on LangChain: [JavaScript tools integrations](https://docs.langchain.com/oss/javascript/integrations/tools).
+
 A thin LangChain.js integration over the official [`@diffbot/typescript`](https://github.com/diffbot/diffbot-typescript) SDK. Every Diffbot API gets the closest LangChain primitive:
 
 | Diffbot API           | LangChain class(es)                                           |
