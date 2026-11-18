@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DiffbotClient } from "@diffbot/typescript";
-import { AIMessageChunk, HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { AIMessageChunk, HumanMessage, SystemMessage, ToolMessage } from "@langchain/core/messages";
 import { ChatDiffbot } from "../src/chat_models.js";
 import { createMockFetch, sseResponse, type MockHandler } from "./helpers/mock-fetch.js";
 
@@ -73,5 +73,25 @@ describe("ChatDiffbot message role mapping", () => {
     expect(roles).toEqual(["system", "user"]);
     expect(payload.messages[0]!.content).toBe("you are a bot");
     expect(payload.messages[1]!.content).toBe("hi");
+  });
+
+  it("sends roles the endpoint does not know (tool, ...) as user turns", async () => {
+    let body: string | undefined;
+    const db = makeClient((req) => {
+      body = req.body;
+      return sseResponse(SSE_BODY);
+    });
+    const llm = new ChatDiffbot({ client: db });
+
+    await llm.invoke([
+      new HumanMessage("hi"),
+      new ToolMessage({ content: "tool output", tool_call_id: "call-1" }),
+    ]);
+
+    const payload = JSON.parse(body ?? "{}") as {
+      messages: Array<{ role: string; content: string }>;
+    };
+    expect(payload.messages.map((m) => m.role)).toEqual(["user", "user"]);
+    expect(payload.messages[1]!.content).toBe("tool output");
   });
 });

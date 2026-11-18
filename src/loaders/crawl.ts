@@ -12,7 +12,11 @@
 
 import {
   crawl,
+  crawlDownload,
+  crawlGetJob,
   CrawlEventType,
+  JobError,
+  type CrawlDataRecord,
   type CrawlEvent,
   type CrawlOptions,
   type DiffbotClient,
@@ -49,9 +53,77 @@ export function defaultCrawlMapper(event: CrawlEvent): Document | null {
   });
 }
 
+/* `(record) -> Document | null`. Return null to skip the record. */
+export type CrawlRecordMapper = (record: CrawlDataRecord) => Document | null;
+
+/*
+  Default mapping for downloaded crawl records: `content` (or, failing that,
+  `text`) becomes `pageContent` and the rest of the identifying fields become
+  metadata. Records follow the ontology of their `type`: the API's own example
+  (`type: "other"`) carries `content`, while Analyze-classified article records
+  carry `text`, so reading only one of them yields empty documents for the other.
+
+  The record's `token` is deliberately never copied — the crawl API echoes the
+  caller's token into every record, and metadata tends to end up in logs and
+  vector stores.
+*/
+export function defaultCrawlRecordMapper(record: CrawlDataRecord): Document | null {
+  const url = record.pageUrl ?? "";
+  const content =
+    record.content || (typeof record.text === "string" ? record.text : undefined) || "";
+  if (!url && !content) {
+    return null;
+  }
+  return new Document({
+    pageContent: content,
+    metadata: {
+      url,
+      title: record.title,
+      type: record.type,
+      parentUrl: record.parentUrl,
+      id: record.id,
+      crawl_timestamp: record.timestamp,
+    },
+  });
+}
+
+/*
+  Opt-in non-watch path. Instead of streaming URL events from `crawl`, create
+  the job (or reuse a finished one), poll `crawlGetJob` until it reaches a
+  terminal status, then fetch the extracted records once with `crawlDownload`.
+  Suited to runtimes that can't sit in a watch loop.
+*/
+const DEFAULT_DOWNLOAD_MAX_WAIT = 600_000;
+
+export interface DiffbotCrawlDownloadOptions {
+  /*
+    Name of an existing crawl job to download. When set, no job is created and
+    `site` / `crawlOptions` are ignored (the job is still polled, so passing an
+    unfinished job waits for it).
+  */
+  jobName?: string;
+  /* Only the N most recently processed URLs (`crawlDownload`'s `num`). */
+  num?: number;
+  /* Milliseconds between status polls. Defaults to 2000. */
+  pollInterval?: number;
+  /*
+    Give up polling after this many milliseconds. Defaults to 600000 (ten
+    minutes, matching the Python loader's `poll_timeout`); pass `Infinity` to
+    wait indefinitely.
+  */
+  maxWait?: number;
+  /* Optional `(record) -> Document | null` override. Return null to skip. */
+  recordMapper?: CrawlRecordMapper;
+}
+
 export interface DiffbotCrawlLoaderFields extends DiffbotComponentFields {
-  /* Seed URL for the crawl. */
-  site: string;
+  /* Seed URL for the crawl. Optional only when `download.jobName` is set. */
+  site?: string;
+  /*
+    Switches the loader to the poll-then-`crawlDownload` path. Omit (the
+    default) for the existing watch-style stream.
+  */
+  download?: DiffbotCrawlDownloadOptions;
   /*
     Extra options passed to `crawl(client, site, options)`.
 
@@ -80,14 +152,21 @@ export class DiffbotCrawlLoader extends BaseDocumentLoader {
   lc_namespace = ["langchain", "document_loaders", "diffbot"];
 
   client: DiffbotClient;
-  site: string;
+  site?: string;
+  download?: DiffbotCrawlDownloadOptions;
   crawlOptions: CrawlOptions;
   eventMapper?: CrawlEventMapper;
 
   constructor(fields: DiffbotCrawlLoaderFields) {
     super();
     this.client = assertClient(fields.client);
+    if (fields.site === undefined && fields.download?.jobName === undefined) {
+      throw new Error(
+        "DiffbotCrawlLoader needs `site`, or `download.jobName` for an existing job.",
+      );
+    }
     this.site = fields.site;
+    this.download = fields.download;
     this.crawlOptions = { ...(fields.crawlOptions ?? {}) };
     if (this.crawlOptions.watch === undefined) {
       this.crawlOptions.watch = true;
@@ -105,11 +184,75 @@ export class DiffbotCrawlLoader extends BaseDocumentLoader {
     an `AsyncGenerator<CrawlEvent>`, so this is a natural passthrough.
   */
   async *lazyLoad(): AsyncGenerator<Document> {
-    for await (const event of crawl(this.client, this.site, this.crawlOptions)) {
+    if (this.download) {
+      yield* this.lazyLoadDownload(this.download);
+      return;
+    }
+    for await (const event of crawl(this.client, this.site!, this.crawlOptions)) {
       const doc = this.mapEvent(event);
       if (doc !== null) {
         yield doc;
       }
+    }
+  }
+
+  private async *lazyLoadDownload(opts: DiffbotCrawlDownloadOptions): AsyncGenerator<Document> {
+    let jobName = opts.jobName;
+    if (jobName === undefined) {
+      /* `watch: false` always: polling is done here, not inside the SDK stream. */
+      for await (const event of crawl(this.client, this.site!, {
+        ...this.crawlOptions,
+        watch: false,
+      })) {
+        if (event.eventType === CrawlEventType.JobCreated) {
+          const name = event.details.job_name;
+          if (typeof name === "string") jobName = name;
+        }
+      }
+      if (jobName === undefined) {
+        throw new Error("Crawl did not report a job name.");
+      }
+    }
+    await this.waitForJob(jobName, opts);
+
+    const records = await crawlDownload(this.client, jobName, {
+      ...(opts.num !== undefined ? { num: opts.num } : {}),
+    });
+    const mapper = opts.recordMapper ?? defaultCrawlRecordMapper;
+    for (const record of records) {
+      const doc = mapper(record);
+      if (doc !== null) {
+        yield doc;
+      }
+    }
+  }
+
+  /*
+    Poll until the job leaves the pending/in-progress states (status 0 / 7,
+    matching the SDK's own watch loop). A terminal message mentioning
+    fail/error is a failed job, not an empty result.
+  */
+  private async waitForJob(jobName: string, opts: DiffbotCrawlDownloadOptions): Promise<void> {
+    const pollInterval = opts.pollInterval ?? 2000;
+    const maxWait = opts.maxWait ?? DEFAULT_DOWNLOAD_MAX_WAIT;
+    const deadline = Date.now() + maxWait;
+    for (;;) {
+      const job = await crawlGetJob(this.client, jobName);
+      if (!job) {
+        throw new JobError(jobName, "Crawler job not found");
+      }
+      const status = job.jobStatus?.status ?? 0;
+      if (status !== 0 && status !== 7) {
+        const message = job.jobStatus?.message ?? "";
+        if (/fail|error/i.test(message)) {
+          throw new JobError(jobName, `Crawler job failed: ${message}`);
+        }
+        return;
+      }
+      if (Date.now() + pollInterval > deadline) {
+        throw new JobError(jobName, `Crawler job did not finish within ${maxWait}ms`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, pollInterval));
     }
   }
 

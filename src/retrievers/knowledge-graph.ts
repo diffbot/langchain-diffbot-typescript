@@ -1,4 +1,4 @@
-import { dql, type DiffbotClient, type JsonObject } from "@diffbot/typescript";
+import { dql, type DiffbotClient, type ExportFormat, type JsonObject } from "@diffbot/typescript";
 import { type Document } from "@langchain/core/documents";
 import { BaseRetriever, type BaseRetrieverInput } from "@langchain/core/retrievers";
 import {
@@ -25,7 +25,7 @@ export interface DiffbotKnowledgeGraphRetrieverFields
   /* Export spec for non-JSON formats. */
   exportspec?: string;
   /* Response format. Defaults to `json`; other values return raw bytes. */
-  format?: string;
+  format?: ExportFormat;
   /* Extra query params merged into the DQL request. */
   extra?: Record<string, string>;
   /*
@@ -70,7 +70,7 @@ export class DiffbotKnowledgeGraphRetriever extends BaseRetriever {
   from: number;
   filter?: string;
   exportspec?: string;
-  format: string;
+  format: ExportFormat;
   extra?: Record<string, string>;
   fields?: string[];
   contentFields: string[];

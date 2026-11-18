@@ -155,6 +155,8 @@ for await (const doc of loader.lazyLoad()) {
 
 `DiffbotExtractTool` returns a structured `{ error, errorCode }` object when Diffbot reports an extraction failure (a 200 response carrying an `errorCode`), so an agent can react and try another URL instead of having to catch an exception. Auth and rate-limit failures still throw — those are infrastructure problems, not per-call signals.
 
+Both accept `extractOptions`, the SDK's `ExtractOptions` (`timeout`, `mode`, `fields`, `fallback`, `discussion`, `paging`, `useProxy`, `extra`, ...), applied to every call. `api` / `fmt` keep their `analyze` / `markdown` defaults. On the tool, `extractOptions` is fixed at construction and is not part of the agent-facing call schema — the agent only chooses the URL.
+
 `DiffbotExtractLoader` implements `lazyLoad()` as well as `load()`. Prefer `lazyLoad()` for long URL lists: it yields each `Document` as its request finishes, instead of buffering the whole batch.
 
 ## Crawl a site
@@ -174,6 +176,29 @@ for await (const doc of loader.lazyLoad()) {
 ```
 
 The loader defaults `watch: true` into its `crawlOptions`, because without it the SDK emits a single `job_created` event and nothing else. Pass `crawlOptions: { watch: false, ... }` if you want to fire a job and walk away, and `eventMapper` to keep events the default mapper skips.
+
+### Non-watch mode: `crawlDownload`
+
+Pass `download` to skip the watch-style stream. The loader creates the job (always with `watch: false`), polls `crawlGetJob` until it finishes, then fetches the extracted records once with the SDK's `crawlDownload`. Each record becomes a `Document` whose `pageContent` is the record's extracted `content`. This suits runtimes that can't sit in a watch loop. It is opt-in; without `download` the loader behaves exactly as above.
+
+```ts
+import { DiffbotClient, resolveTokenFromEnv } from "@diffbot/typescript";
+import { DiffbotCrawlLoader } from "@diffbot/langchain";
+
+const client = new DiffbotClient({ token: resolveTokenFromEnv() });
+
+/* Create a job, wait for it, download its records. */
+const fresh = new DiffbotCrawlLoader({
+  client,
+  site: "https://www.diffbot.com",
+  download: { num: 50, pollInterval: 5000, maxWait: 600_000 },
+});
+
+/* Or download a job that already finished (no `site` needed). */
+const existing = new DiffbotCrawlLoader({ client, download: { jobName: "my-finished-job" } });
+```
+
+`download` options: `jobName` (reuse an existing job instead of creating one), `num` (only the N most recently processed URLs), `pollInterval` (ms, default 2000), `maxWait` (ms, default 600000 like the Python loader's `poll_timeout`; `Infinity` waits indefinitely) and `recordMapper` (`(record) => Document | null`; the default is exported as `defaultCrawlRecordMapper` and reads `content`, falling back to `text`). A job that finishes with a failure message throws a `JobError`. The record's echoed `token` is never copied into metadata.
 
 ## ChatDiffbot
 

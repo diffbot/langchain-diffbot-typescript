@@ -12,6 +12,8 @@ export interface MockRequest {
   headers: Headers;
   params: URLSearchParams;
   body?: string;
+  /* Parsed JSON request body, when the body is a JSON string (DQL POSTs). */
+  json?: Record<string, unknown>;
 }
 
 export type MockHandler = (request: MockRequest) => Response | Promise<Response>;
@@ -30,12 +32,25 @@ export function createMockFetch(handler: MockHandler): FetchFn {
     const headers = new Headers(init?.headers);
     const body = toTextBody(init?.body ?? null);
 
+    let json: Record<string, unknown> | undefined;
+    if (body !== undefined) {
+      try {
+        const parsedBody: unknown = JSON.parse(body);
+        if (parsedBody !== null && typeof parsedBody === "object") {
+          json = parsedBody as Record<string, unknown>;
+        }
+      } catch {
+        /* Not JSON; leave `json` undefined. */
+      }
+    }
+
     return handler({
       url: `${parsed.origin}${parsed.pathname}`,
       method,
       headers,
       params: parsed.searchParams,
       body,
+      json,
     });
   };
 }

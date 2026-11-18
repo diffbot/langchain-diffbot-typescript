@@ -12,7 +12,7 @@
   other knobs.
 */
 
-import { ask, type ChatMessage, type DiffbotClient } from "@diffbot/typescript";
+import { ask, type ChatMessage, type ChatRole, type DiffbotClient } from "@diffbot/typescript";
 import type { CallbackManagerForLLMRun } from "@langchain/core/callbacks/manager";
 import {
   BaseChatModel,
@@ -24,7 +24,7 @@ import { assertClient, type DiffbotComponentFields } from "./base.js";
 
 function toDiffbotMessages(messages: BaseMessage[]): ChatMessage[] {
   return messages.map((message) => {
-    let role: string;
+    let role: ChatRole;
     switch (message.getType()) {
       case "human":
         role = "user";
@@ -36,8 +36,11 @@ function toDiffbotMessages(messages: BaseMessage[]): ChatMessage[] {
         role = "system";
         break;
       default:
-        /* Fall back on the message's own type for anything exotic. */
-        role = message.getType();
+        /*
+          The endpoint only knows system/user/assistant, so anything exotic
+          (tool, function, ...) is sent as a user turn.
+        */
+        role = "user";
     }
     const content =
       typeof message.content === "string" ? message.content : JSON.stringify(message.content);

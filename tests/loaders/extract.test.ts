@@ -148,4 +148,21 @@ describe("DiffbotExtractLoader.lazyLoad", () => {
     const docs = await loader.load();
     expect(docs).toHaveLength(2);
   });
+
+  it("passes extractOptions to every extract call", async () => {
+    const timeouts: Array<string | null> = [];
+    const db = makeClient((req) => {
+      timeouts.push(req.params.get("timeout"));
+      expect(req.params.get("useProxy")).toBe("true");
+      return jsonResponse({ objects: [{ text: "Body." }] });
+    });
+    const loader = new DiffbotExtractLoader({
+      client: db,
+      urls: ["https://example.com/a", "https://example.com/b"],
+      extractOptions: { timeout: 7000, useProxy: "true" },
+    });
+
+    await loader.load();
+    expect(timeouts).toEqual(["7000", "7000"]);
+  });
 });

@@ -30,10 +30,10 @@ describe("DiffbotKnowledgeGraphTool", () => {
   it("sends query, size, from and filter on the wire", async () => {
     const tool = toolWith((req) => {
       expect(req.url).toBe("https://kg.diffbot.com/kg/v3/dql");
-      expect(req.params.get("query")).toBe("type:Organization");
-      expect(req.params.get("size")).toBe("5");
-      expect(req.params.get("from")).toBe("20");
-      expect(req.params.get("filter")).toBe("nbEmployees>100");
+      expect(req.json?.query).toBe("type:Organization");
+      expect(req.json?.size).toBe(5);
+      expect(req.json?.from).toBe(20);
+      expect(req.json?.filter).toBe("nbEmployees>100");
       return jsonResponse({ data: [] });
     });
 
@@ -47,9 +47,9 @@ describe("DiffbotKnowledgeGraphTool", () => {
 
   it("defaults to size 10 and omits from and filter", async () => {
     const tool = toolWith((req) => {
-      expect(req.params.get("size")).toBe("10");
-      expect(req.params.get("from")).toBeNull();
-      expect(req.params.get("filter")).toBeNull();
+      expect(req.json?.size).toBe(10);
+      expect(req.json?.from).toBeUndefined();
+      expect(req.json?.filter).toBeUndefined();
       return jsonResponse({ data: [] });
     });
 
