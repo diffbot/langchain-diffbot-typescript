@@ -57,18 +57,25 @@ export function defaultCrawlMapper(event: CrawlEvent): Document | null {
 export type CrawlRecordMapper = (record: CrawlDataRecord) => Document | null;
 
 /*
-  Default mapping for downloaded crawl records: `content` becomes `pageContent`
-  and the rest of the identifying fields become metadata. The record's `token`
-  is deliberately never copied — the crawl API echoes the caller's token into
-  every record, and metadata tends to end up in logs and vector stores.
+  Default mapping for downloaded crawl records: `content` (or, failing that,
+  `text`) becomes `pageContent` and the rest of the identifying fields become
+  metadata. Records follow the ontology of their `type`: the API's own example
+  (`type: "other"`) carries `content`, while Analyze-classified article records
+  carry `text`, so reading only one of them yields empty documents for the other.
+
+  The record's `token` is deliberately never copied — the crawl API echoes the
+  caller's token into every record, and metadata tends to end up in logs and
+  vector stores.
 */
 export function defaultCrawlRecordMapper(record: CrawlDataRecord): Document | null {
   const url = record.pageUrl ?? "";
-  if (!url && !record.content) {
+  const content =
+    record.content || (typeof record.text === "string" ? record.text : undefined) || "";
+  if (!url && !content) {
     return null;
   }
   return new Document({
-    pageContent: record.content ?? "",
+    pageContent: content,
     metadata: {
       url,
       title: record.title,
@@ -86,6 +93,8 @@ export function defaultCrawlRecordMapper(record: CrawlDataRecord): Document | nu
   terminal status, then fetch the extracted records once with `crawlDownload`.
   Suited to runtimes that can't sit in a watch loop.
 */
+const DEFAULT_DOWNLOAD_MAX_WAIT = 600_000;
+
 export interface DiffbotCrawlDownloadOptions {
   /*
     Name of an existing crawl job to download. When set, no job is created and
@@ -97,7 +106,11 @@ export interface DiffbotCrawlDownloadOptions {
   num?: number;
   /* Milliseconds between status polls. Defaults to 2000. */
   pollInterval?: number;
-  /* Give up polling after this many milliseconds. Defaults to no limit. */
+  /*
+    Give up polling after this many milliseconds. Defaults to 600000 (ten
+    minutes, matching the Python loader's `poll_timeout`); pass `Infinity` to
+    wait indefinitely.
+  */
   maxWait?: number;
   /* Optional `(record) -> Document | null` override. Return null to skip. */
   recordMapper?: CrawlRecordMapper;
@@ -221,7 +234,8 @@ export class DiffbotCrawlLoader extends BaseDocumentLoader {
   */
   private async waitForJob(jobName: string, opts: DiffbotCrawlDownloadOptions): Promise<void> {
     const pollInterval = opts.pollInterval ?? 2000;
-    const deadline = opts.maxWait === undefined ? undefined : Date.now() + opts.maxWait;
+    const maxWait = opts.maxWait ?? DEFAULT_DOWNLOAD_MAX_WAIT;
+    const deadline = Date.now() + maxWait;
     for (;;) {
       const job = await crawlGetJob(this.client, jobName);
       if (!job) {
@@ -235,8 +249,8 @@ export class DiffbotCrawlLoader extends BaseDocumentLoader {
         }
         return;
       }
-      if (deadline !== undefined && Date.now() + pollInterval > deadline) {
-        throw new JobError(jobName, `Crawler job did not finish within ${opts.maxWait}ms`);
+      if (Date.now() + pollInterval > deadline) {
+        throw new JobError(jobName, `Crawler job did not finish within ${maxWait}ms`);
       }
       await new Promise((resolve) => setTimeout(resolve, pollInterval));
     }

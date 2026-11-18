@@ -49,7 +49,7 @@ src/
 ├── chat_models.ts         # ChatDiffbot (wraps `ask`)
 ├── loaders/
 │   ├── extract.ts         # DiffbotExtractLoader
-│   └── crawl.ts           # DiffbotCrawlLoader, defaultCrawlMapper
+│   └── crawl.ts           # DiffbotCrawlLoader, defaultCrawlMapper, defaultCrawlRecordMapper
 ├── retrievers/
 │   ├── knowledge-graph.ts # DiffbotKnowledgeGraphRetriever
 │   └── web-search.ts      # DiffbotWebSearchRetriever

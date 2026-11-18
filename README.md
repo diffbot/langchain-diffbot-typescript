@@ -198,7 +198,7 @@ const fresh = new DiffbotCrawlLoader({
 const existing = new DiffbotCrawlLoader({ client, download: { jobName: "my-finished-job" } });
 ```
 
-`download` options: `jobName` (reuse an existing job instead of creating one), `num` (only the N most recently processed URLs), `pollInterval` (ms, default 2000), `maxWait` (ms, default unlimited) and `recordMapper` (`(record) => Document | null`; the default is exported as `defaultCrawlRecordMapper`). A job that finishes with a failure message throws a `JobError`. The record's echoed `token` is never copied into metadata.
+`download` options: `jobName` (reuse an existing job instead of creating one), `num` (only the N most recently processed URLs), `pollInterval` (ms, default 2000), `maxWait` (ms, default 600000 like the Python loader's `poll_timeout`; `Infinity` waits indefinitely) and `recordMapper` (`(record) => Document | null`; the default is exported as `defaultCrawlRecordMapper` and reads `content`, falling back to `text`). A job that finishes with a failure message throws a `JobError`. The record's echoed `token` is never copied into metadata.
 
 ## ChatDiffbot
 

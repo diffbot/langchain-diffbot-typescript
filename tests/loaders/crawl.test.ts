@@ -286,4 +286,17 @@ describe("DiffbotCrawlLoader download mode (non-watch crawlDownload)", () => {
     expect(loader.download).toBeUndefined();
     expect(loader.crawlOptions.watch).toBe(true);
   });
+
+  it("falls back to `text` when a record has no `content`", async () => {
+    const db = makeClient((req) =>
+      req.url.endsWith("/data")
+        ? jsonResponse([{ pageUrl: "https://example.com/c", type: "article", text: "Body C" }])
+        : jsonResponse({ jobs: [{ jobStatus: { status: 9, message: "done" } }] }),
+    );
+    const docs = await new DiffbotCrawlLoader({
+      client: db,
+      download: { jobName: "old-job" },
+    }).load();
+    expect(docs.map((d) => d.pageContent)).toEqual(["Body C"]);
+  });
 });
