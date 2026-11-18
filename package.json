@@ -58,12 +58,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/diffbot/diffbot-langchain-typescript.git"
+    "url": "git+https://github.com/diffbot/langchain-diffbot-typescript.git"
   },
   "bugs": {
-    "url": "https://github.com/diffbot/diffbot-langchain-typescript/issues"
+    "url": "https://github.com/diffbot/langchain-diffbot-typescript/issues"
   },
-  "homepage": "https://github.com/diffbot/diffbot-langchain-typescript#readme",
+  "homepage": "https://github.com/diffbot/langchain-diffbot-typescript#readme",
   "publishConfig": {
     "access": "public"
   },
