@@ -12,8 +12,8 @@ importers:
         specifier: link:../..
         version: link:../..
       '@diffbot/typescript':
-        specifier: 0.6.0-rc.0
-        version: 0.6.0-rc.0
+        specifier: ^0.6.0
+        version: 0.6.0
       '@langchain/anthropic':
         specifier: ^1.5.4
         version: 1.5.4(@langchain/core@1.2.5)
@@ -58,8 +58,8 @@ packages:
   '@cfworker/json-schema@4.1.1':
     resolution: {integrity: sha512-gAmrUZSGtKc3AiBL71iNWxDsyUC5uMaKKGdvzYsBoTW/xi42JQHl7eKV2OYzCUqvc+D2RCcf7EXY2iCyFIk6og==}
 
-  '@diffbot/typescript@0.6.0-rc.0':
-    resolution: {integrity: sha512-04XHLNRhi/4JoQ2a2d4RChBGS1ZParIWeDqfjL+mcdkhUanlVJiLwvSBbQO3ttKd1gsPUA7WdcQ0+HaaH6z5Ng==}
+  '@diffbot/typescript@0.6.0':
+    resolution: {integrity: sha512-Sdrnk3+4QHo9BzP/hheAweI4L067EKEHXOrK26Lc6F0gLY/RMsifFiJVeolEAnKdI8HfDrUb7K/qBMQkU6DfiA==}
     engines: {node: '>=18'}
 
   '@esbuild/aix-ppc64@0.28.2':
@@ -400,7 +400,7 @@ snapshots:
 
   '@cfworker/json-schema@4.1.1': {}
 
-  '@diffbot/typescript@0.6.0-rc.0': {}
+  '@diffbot/typescript@0.6.0': {}
 
   '@esbuild/aix-ppc64@0.28.2':
     optional: true

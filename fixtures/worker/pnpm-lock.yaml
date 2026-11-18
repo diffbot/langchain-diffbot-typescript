@@ -12,8 +12,8 @@ importers:
         specifier: link:../..
         version: link:../..
       '@diffbot/typescript':
-        specifier: 0.6.0-rc.0
-        version: 0.6.0-rc.0
+        specifier: ^0.6.0
+        version: 0.6.0
       '@langchain/core':
         specifier: ^1.2.5
         version: 1.2.8(ws@8.21.0)
@@ -139,8 +139,8 @@ packages:
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
     engines: {node: '>=12'}
 
-  '@diffbot/typescript@0.6.0-rc.0':
-    resolution: {integrity: sha512-04XHLNRhi/4JoQ2a2d4RChBGS1ZParIWeDqfjL+mcdkhUanlVJiLwvSBbQO3ttKd1gsPUA7WdcQ0+HaaH6z5Ng==}
+  '@diffbot/typescript@0.6.0':
+    resolution: {integrity: sha512-Sdrnk3+4QHo9BzP/hheAweI4L067EKEHXOrK26Lc6F0gLY/RMsifFiJVeolEAnKdI8HfDrUb7K/qBMQkU6DfiA==}
     engines: {node: '>=18'}
 
   '@emnapi/runtime@1.11.3':
@@ -1647,7 +1647,7 @@ snapshots:
     dependencies:
       '@jridgewell/trace-mapping': 0.3.9
 
-  '@diffbot/typescript@0.6.0-rc.0': {}
+  '@diffbot/typescript@0.6.0': {}
 
   '@emnapi/runtime@1.11.3':
     dependencies:
