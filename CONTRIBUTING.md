@@ -80,21 +80,47 @@ directory and add its export to `src/index.ts`.
 ## Releasing
 
 Unlike the Python sibling package (`langchain-diffbot`), there is no local
-publish path — publishing only happens through the tagged release workflow
-(`.github/workflows/release.yml`). To cut a release:
+publish path. Publishing only happens through the tagged release workflow
+(`.github/workflows/release.yml`), which follows the shared npm release
+workflow standard for the Diffbot TypeScript packages
+(`docs/conventions/npm-release-workflow.md` in diffbot-dev-docs).
 
-1. Bump `version` in `package.json`.
-2. Commit the bump.
-3. Tag the commit `vX.Y.Z` (matching the new `package.json` version exactly)
-   and push the tag:
+To cut a final release:
+
+1. Bump `version` in `package.json` to `X.Y.Z`.
+2. Add a `## [X.Y.Z] - YYYY-MM-DD` section to `CHANGELOG.md`. It becomes the
+   GitHub Release notes.
+3. Commit, merge to `main`, then tag the merge commit `vX.Y.Z` (matching
+   `package.json` exactly) and push the tag:
    ```
    git tag vX.Y.Z
    git push origin vX.Y.Z
    ```
-4. The release workflow builds the package, verifies the tag matches
-   `package.json`, publishes to npm with provenance, and creates the
-   corresponding GitHub release.
 
-There is no manual `npm publish` / `pnpm publish` step — if the tag and
-`package.json` version disagree, the workflow fails before anything is
-published.
+To cut a release candidate, use a version such as `X.Y.Z-rc.0` and tag
+`vX.Y.Z-rc.0`. Its CHANGELOG section may be the base `## [X.Y.Z]` one. Any
+version containing `-` is published under the npm `next` dist-tag (`latest`
+is untouched), and its GitHub Release is marked as a prerelease. A final
+version is published as `latest` and then also moves `next`.
+
+On a tag push the workflow:
+
+1. `verify`: checks the tag matches `package.json` and that `CHANGELOG.md` has
+   a section for the version.
+2. `gates`: runs `pnpm lint`, `pnpm typecheck`, `pnpm test` and `pnpm build`
+   on Node 22 and uploads the built package as an artifact. A sibling
+   `workers` job runs the Cloudflare worker fixture's `wrangler deploy
+   --dry-run`, as `ci.yml` does (its vitest suite is still skipped; see
+   `fixtures/worker/vitest.config.ts`).
+3. `publish`: publishes that artifact to npm with provenance via trusted
+   publishing (no token). It skips the publish if the version is already on
+   npm, so a failed run can be re-run.
+4. `github-release`: creates the GitHub Release with the CHANGELOG notes and
+   attaches `dist/*`.
+
+There is no manual `npm publish` / `pnpm publish` step. If the tag and
+`package.json` version disagree, or the CHANGELOG section is missing, the
+workflow fails before anything is published. A manual `workflow_dispatch`
+(action `dry-run`) runs the same gates and a publish rehearsal (`npm publish --dry-run`, or `npm pack` if the version is already on npm) and
+publishes nothing; action `move-next` only re-points `next` at an
+already-published version.

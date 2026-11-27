@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0 - 2026-11-17
+## [0.2.0] - 2026-11-17
 
 Ship the unpublished 0.2.0 line against `@diffbot/typescript` ^0.6.0.
 
