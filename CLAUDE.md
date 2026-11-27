@@ -134,7 +134,7 @@ Run `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm exec prettier --check 
 
 ## Releasing
 
-There is no local publish path. Bump `version` in `package.json`, commit, tag `vX.Y.Z` matching it exactly, and push the tag; `.github/workflows/release.yml` builds, verifies the tag against `package.json`, publishes to npm with provenance, and creates the GitHub release. A mismatched tag fails the workflow before anything is published. See `CONTRIBUTING.md`.
+There is no local publish path. Bump `version` in `package.json`, add a `## [X.Y.Z] - YYYY-MM-DD` section to `CHANGELOG.md`, merge, tag `vX.Y.Z` matching it exactly, and push the tag. `.github/workflows/release.yml` follows the shared npm release workflow standard (diffbot-dev-docs `docs/conventions/npm-release-workflow.md`): `verify` (tag vs `package.json`, CHANGELOG section) → `gates` (lint, typecheck, test, build on Node 22, plus the worker fixture's wrangler dry-run) → `publish` (the built artifact, npm trusted publishing with provenance, skipped if already on npm) → `github-release` (notes from the CHANGELOG section, `dist/*` attached). A version containing `-` (an RC such as `vX.Y.Z-rc.0`) publishes to npm `next` and is a GitHub prerelease; a final publishes to `latest` and also moves `next`. A mismatched tag or a missing CHANGELOG section fails the workflow before anything is published. `workflow_dispatch` is a dry run. See `CONTRIBUTING.md`.
 
 ## Style
 
