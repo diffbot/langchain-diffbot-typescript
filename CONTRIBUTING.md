@@ -121,6 +121,6 @@ On a tag push the workflow:
 There is no manual `npm publish` / `pnpm publish` step. If the tag and
 `package.json` version disagree, or the CHANGELOG section is missing, the
 workflow fails before anything is published. A manual `workflow_dispatch`
-(action `dry-run`) runs the same gates and `npm publish --dry-run` and
+(action `dry-run`) runs the same gates and a publish rehearsal (`npm publish --dry-run`, or `npm pack` if the version is already on npm) and
 publishes nothing; action `move-next` only re-points `next` at an
 already-published version.
