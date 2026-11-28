@@ -1,0 +1,38 @@
+# Dependabot: Diffbot-owned packages and GitHub Actions only, kept low-noise.
+# Floor rule: change a range only when it would not pick up the new release on a
+# fresh install. Keep this file in the same shape as the other Diffbot repos.
+version: 2
+updates:
+  # Diffbot-owned npm packages only. increase-if-necessary keeps the range
+  # unless it would not pick up the new release (floor rule).
+  - package-ecosystem: npm
+    # The fixture and examples pin @diffbot/typescript too and link the root
+    # package, so they must move with it: group-by puts all directories in one PR.
+    directories:
+      - /
+      - /fixtures/worker
+      - /examples/company-research
+      - /examples/dql-explorer
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    versioning-strategy: increase-if-necessary
+    allow:
+      - dependency-name: "@diffbot/*"
+    groups:
+      diffbot:
+        patterns:
+          - "@diffbot/*"
+        group-by: dependency-name
+
+  # GitHub Actions used by .github/workflows. One grouped PR a month at most.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 2
+    groups:
+      github-actions:
+        patterns:
+          - "*"
